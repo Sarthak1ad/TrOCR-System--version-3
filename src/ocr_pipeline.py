@@ -16,8 +16,15 @@ Why hybrid?
 So: PaddleOCR finds each line -> we crop it -> TrOCR reads that crop.
 """
 
-import time
 import os
+
+# PaddlePaddle and PyTorch each bundle their own copy of the OpenMP runtime
+# (libiomp5md.dll on Windows). Loading both in the same process triggers
+# OMP Error #15. This is the standard, safe-enough workaround — must be
+# set BEFORE torch/paddleocr get imported anywhere.
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
+import time
 from typing import Optional
 import numpy as np
 import cv2
@@ -37,7 +44,7 @@ def get_detector(lang: str = "en"):
     global _DETECTOR
     if _DETECTOR is None:
         from paddleocr import PaddleOCR
-        _DETECTOR = PaddleOCR(use_angle_cls=True, lang=lang, show_log=False)
+        _DETECTOR = PaddleOCR(use_angle_cls=True, lang=lang, show_log=False, enable_mkldnn=False)
     return _DETECTOR
 
 
@@ -46,8 +53,8 @@ def get_recognizer(model_name: str = "microsoft/trocr-base-handwritten"):
     Lazily loads TrOCR (processor + model) for handwriting recognition.
 
     Model options (swap in get_recognizer call if needed):
-      - "microsoft/trocr-small-handwritten"  -> faster, smaller download, lower accuracy
-      - "microsoft/trocr-base-handwritten"   -> good balance (default)
+      - "microsoft/trocr-small-handwritten"  -> faster, smaller download, lower accuracy (default)
+      - "microsoft/trocr-base-handwritten"   -> good balance, ~1.3GB download
       - "microsoft/trocr-large-handwritten"  -> best accuracy, slow, large download
     """
     global _TROCR_PROCESSOR, _TROCR_MODEL, _TORCH_DEVICE

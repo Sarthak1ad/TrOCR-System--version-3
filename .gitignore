@@ -1,0 +1,31 @@
+﻿# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Personal handwriting data - don't publish your own photos/labels by default
+finetune/data/raw_photos/*
+!finetune/data/raw_photos/.gitkeep
+finetune/data/line_crops/*
+!finetune/data/line_crops/.gitkeep
+finetune/data/labels.csv
+
+# Trained model weights - too large for GitHub, specific to one person
+finetune/models/*
+!finetune/models/.gitkeep
+finetune/models/checkpoints/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+
+# Temp files created during processing
+_tmp_prep.jpg
+_tmp_preprocessed.jpg
