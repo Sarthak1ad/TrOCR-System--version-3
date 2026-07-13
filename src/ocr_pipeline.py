@@ -17,6 +17,11 @@ So: PaddleOCR finds each line -> we crop it -> TrOCR reads that crop.
 """
 
 import os
+FINETUNED_MODEL_PATH = os.path.join(
+    "finetune",
+    "models",
+    "trocr-finetuned"
+)
 
 # PaddlePaddle and PyTorch each bundle their own copy of the OpenMP runtime
 # (libiomp5md.dll on Windows). Loading both in the same process triggers
@@ -48,25 +53,61 @@ def get_detector(lang: str = "en"):
     return _DETECTOR
 
 
-def get_recognizer(model_name: str = "microsoft/trocr-base-handwritten"):
-    """
-    Lazily loads TrOCR (processor + model) for handwriting recognition.
+def get_recognizer(model_name=None):
 
-    Model options (swap in get_recognizer call if needed):
-      - "microsoft/trocr-small-handwritten"  -> faster, smaller download, lower accuracy (default)
-      - "microsoft/trocr-base-handwritten"   -> good balance, ~1.3GB download
-      - "microsoft/trocr-large-handwritten"  -> best accuracy, slow, large download
-    """
-    global _TROCR_PROCESSOR, _TROCR_MODEL, _TORCH_DEVICE
-    if _TROCR_MODEL is None:
-        import torch
-        from transformers import TrOCRProcessor, VisionEncoderDecoderModel
+    global _TROCR_PROCESSOR
+    global _TROCR_MODEL
+    global _TORCH_DEVICE
 
-        _TORCH_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-        _TROCR_PROCESSOR = TrOCRProcessor.from_pretrained(model_name)
-        _TROCR_MODEL = VisionEncoderDecoderModel.from_pretrained(model_name)
-        _TROCR_MODEL.to(_TORCH_DEVICE)
-        _TROCR_MODEL.eval()
+    if _TROCR_MODEL is not None:
+        return _TROCR_PROCESSOR, _TROCR_MODEL
+
+    import torch
+    from transformers import TrOCRProcessor
+    from transformers import VisionEncoderDecoderModel
+
+    _TORCH_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+    if model_name is None:
+
+        finetuned = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "finetune",
+            "models",
+            "trocr-finetuned",
+        )
+
+        finetuned = os.path.abspath(finetuned)
+
+        if os.path.isdir(finetuned):
+
+            print("\n")
+            print("="*70)
+            print("Loading Fine-Tuned TrOCR")
+            print(finetuned)
+            print("="*70)
+
+            model_name = finetuned
+
+        else:
+
+            print("\n")
+            print("="*70)
+            print("Fine-tuned model NOT found")
+            print("Loading Base TrOCR")
+            print("="*70)
+
+            model_name = "microsoft/trocr-base-handwritten"
+
+    _TROCR_PROCESSOR = TrOCRProcessor.from_pretrained(model_name)
+
+    _TROCR_MODEL = VisionEncoderDecoderModel.from_pretrained(model_name)
+
+    _TROCR_MODEL.to(_TORCH_DEVICE)
+
+    _TROCR_MODEL.eval()
+
     return _TROCR_PROCESSOR, _TROCR_MODEL
 
 
@@ -165,7 +206,7 @@ def run_ocr(
     apply_preprocessing: bool = True,
     min_confidence: float = 0.60,
     lang: str = "en",
-    trocr_model: str = "microsoft/trocr-base-handwritten",
+    trocr_model: str = None,
 ) -> dict:
     """
     Runs the full handwriting OCR pipeline on a single image.
