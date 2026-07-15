@@ -230,7 +230,7 @@ The first execution downloads:
 | Model              | Size    |
 | ------------------ | ------- |
 | PaddleOCR Detector | ~5 MB   |
-| TrOCR Base         | ~1.3 GB |
+| TrOCR Base         | ~2.3 GB |
 
 After downloading once, the models are cached locally.
 
